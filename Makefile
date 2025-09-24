@@ -10,7 +10,7 @@ build:
 # Start development server
 serve:
 	@echo "Starting server and opening browser..."
-	@cd web && python3 -m http.server 8080 & sleep 1
+	@cd web && python3 -m http.server 8080
 
 # Development mode: build and serve
 dev: build serve
