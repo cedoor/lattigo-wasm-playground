@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>Lattigo WASM Demo</title></head>
+  <body>
+    <h1>Lattigo CKKS in the Browser</h1>
+    <button id="run">Run</button>
+    <pre id="out"></pre>
+
+    <script src="wasm_exec.js"></script>
+    <script>
+      const go = new Go();
+      // Load WASM
+      WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject)
+        .then(({instance}) => go.run(instance));
+
+      document.getElementById('run').onclick = async () => {
+        // Wait a tick to ensure Go runtime initialized
+        await new Promise(r => setTimeout(r, 50));
+        ckksInit();
+
+        const a = new Float64Array([0.1, 0.2, 0.3]);
+        const b = new Float64Array([1.0, 2.0, 3.0]);
+
+        const cta = ckksEncrypt(a);
+        const ctb = ckksEncrypt(b);
+        const ctc = ckksEvalAdd(cta, ctb);
+        const res = ckksDecrypt(ctc); // Float64Array ~ [1.1, 2.2, 3.3]
+
+        document.getElementById('out').textContent =
+          `Result (approx): [${Array.from(res).map(x=>x.toFixed(4)).join(", ")}]`;
+      };
+    </script>
+  </body>
+</html>
