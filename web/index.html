@@ -1,34 +1,278 @@
 <!doctype html>
-<html>
-  <head><meta charset="utf-8"><title>Lattigo WASM Demo</title></head>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lattigo WASM Demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background: #f8fafc;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      
+      .container {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        max-width: 600px;
+        width: 100%;
+        text-align: center;
+      }
+      
+      h1 {
+        color: #2d3748;
+        margin-bottom: 16px;
+        font-size: 2.2em;
+        font-weight: 700;
+      }
+      
+      .subtitle {
+        color: #718096;
+        margin-bottom: 32px;
+        font-size: 1.1em;
+      }
+      
+      .demo-section {
+        background: #f7fafc;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 24px 0;
+        border: 1px solid #e2e8f0;
+      }
+      
+      .input-arrays {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin: 20px 0;
+        text-align: left;
+      }
+      
+      .array-display {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        font-size: 0.9em;
+      }
+      
+      .array-label {
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 4px;
+        font-family: inherit;
+      }
+      
+      button {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 32px;
+        font-size: 1.1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 16px 0;
+      }
+      
+      button:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+      }
+      
+      button:active {
+        transform: translateY(0);
+      }
+      
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      #output {
+        background: #1a202c;
+        color: #68d391;
+        border-radius: 8px;
+        padding: 20px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        font-size: 1em;
+        line-height: 1.5;
+        text-align: left;
+        margin-top: 20px;
+        min-height: 60px;
+        display: none;
+      }
+      
+      #output.show {
+        display: block;
+      }
+      
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      
+      @media (max-width: 640px) {
+        .container {
+          padding: 24px;
+        }
+        
+        h1 {
+          font-size: 1.8em;
+        }
+        
+        .input-arrays {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
   <body>
-    <h1>Lattigo CKKS in the Browser</h1>
-    <button id="run">Run</button>
-    <pre id="out"></pre>
+    <div class="container">
+      <h1>🔐 Lattigo WASM Demo</h1>
+      <p class="subtitle">Homomorphic encryption in your browser - perform calculations on encrypted data!</p>
+      
+      <div class="demo-section">
+        <h3>Input Arrays</h3>
+        <div class="input-arrays">
+          <div class="array-display">
+            <div class="array-label">Array A:</div>
+            <code>[0.1, 0.2, 0.3]</code>
+          </div>
+          <div class="array-display">
+            <div class="array-label">Array B:</div>
+            <code>[1.0, 2.0, 3.0]</code>
+          </div>
+        </div>
+        
+        <button id="run">Run Homomorphic Addition</button>
+        
+        <div id="output"></div>
+      </div>
+    </div>
 
     <script src="wasm_exec.js"></script>
     <script>
       const go = new Go();
+      let wasmReady = false;
+      
       // Load WASM
       WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject)
-        .then(({instance}) => go.run(instance));
+        .then(({instance}) => {
+          go.run(instance);
+          wasmReady = true;
+          document.getElementById('run').disabled = false;
+        })
+        .catch(err => {
+          console.error('Failed to load WASM:', err);
+          document.getElementById('output').innerHTML = '❌ Failed to load WebAssembly module';
+          document.getElementById('output').classList.add('show');
+        });
+      
+      // Initially disable button
+      document.getElementById('run').disabled = true;
+      document.getElementById('run').textContent = 'Loading WASM...';
+      
+      
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
 
       document.getElementById('run').onclick = async () => {
-        // Wait a tick to ensure Go runtime initialized
-        await new Promise(r => setTimeout(r, 50));
-        ckksInit();
-
-        const a = new Float64Array([0.1, 0.2, 0.3]);
-        const b = new Float64Array([1.0, 2.0, 3.0]);
-
-        const cta = ckksEncrypt(a);
-        const ctb = ckksEncrypt(b);
-        const ctc = ckksEvalAdd(cta, ctb);
-        const res = ckksDecrypt(ctc); // Float64Array ~ [1.1, 2.2, 3.3]
-
-        document.getElementById('out').textContent =
-          `Result (approx): [${Array.from(res).map(x=>x.toFixed(4)).join(", ")}]`;
+        if (!wasmReady) return;
+        
+        const button = document.getElementById('run');
+        const output = document.getElementById('output');
+        
+        // Disable button and show loading
+        button.disabled = true;
+        button.innerHTML = '<span class="loading"></span>Processing...';
+        output.classList.add('show');
+        
+        try {
+          // Step 1: Initialize
+          output.innerHTML = '🔧 Initializing CKKS parameters and keys...';
+          await sleep(300);
+          ckksInit();
+          
+          // Step 2: Encrypt
+          output.innerHTML += '<br>🔐 Encrypting input arrays...';
+          await sleep(300);
+          
+          const a = new Float64Array([0.1, 0.2, 0.3]);
+          const b = new Float64Array([1.0, 2.0, 3.0]);
+          
+          const cta = ckksEncrypt(a);
+          const ctb = ckksEncrypt(b);
+          
+          // Step 3: Homomorphic addition
+          output.innerHTML += '<br>➕ Performing homomorphic addition on encrypted data...';
+          await sleep(500);
+          
+          const ctc = ckksEvalAdd(cta, ctb);
+          
+          // Step 4: Decrypt
+          output.innerHTML += '<br>🔓 Decrypting result...';
+          await sleep(300);
+          
+          const res = ckksDecrypt(ctc);
+          
+          // Show final result
+          const resultArray = Array.from(res).map(x => x.toFixed(4));
+          output.innerHTML += '<br><br>✅ Success!<br>';
+          output.innerHTML += '🎯 Expected: [1.1000, 2.2000, 3.3000]<br>';
+          output.innerHTML += `📊 Computed: [${resultArray.join(', ')}]`;
+          
+          // Calculate precision
+          const expected = [1.1, 2.2, 3.3];
+          const errors = res.slice(0, 3).map((val, i) => Math.abs(val - expected[i]));
+          const maxError = Math.max(...errors);
+          output.innerHTML += `<br>📏 Max error: ${maxError.toExponential(2)}`;
+          
+        } catch (error) {
+          output.innerHTML = `❌ Error: ${error.message}`;
+        } finally {
+          // Re-enable button
+          button.disabled = false;
+          button.textContent = 'Run Again';
+        }
       };
+      
+      // Reset button text when WASM loads
+      setTimeout(() => {
+        if (wasmReady) {
+          document.getElementById('run').textContent = 'Run Homomorphic Addition';
+        }
+      }, 1000);
     </script>
   </body>
 </html>
